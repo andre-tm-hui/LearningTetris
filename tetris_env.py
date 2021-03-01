@@ -196,15 +196,19 @@ class Tetris(NESEnv):
         )
 
     def _get_state(self):
-        if self._mode == FEATURE_DQN:
+        if self._mode == FEATURE_DQN or self._mode == MIX_DQN:
             # create an array of values corresponding to different features
             board = self._board
             holes, overhangs, hole_depth = score_holes(board, get_column_heights(board))
             jagged, slope = score_bumps(get_column_heights(board))
-            return [holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board), piece_data[self._next_piece]['id']]
+            ret_state = [holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board), piece_data[self._next_piece]['id']]
         else:
             # append the next piece to the board before returning it
-            return np.append(self._board,[[piece_data[self._current_piece]['id'] for i in range(10)]], axis=0)
+            ret_state = [np.append(self._board,[[piece_data[self._current_piece]['id'] for i in range(10)]], axis=0)]
+        if self._mode == FEATURE_DQN or self._mode == BOARD_DQN:
+            return ret_state
+        else:
+            return [self._board], ret_state
 
     def _get_states(self):
         while self._current_piece == None and not self._is_game_over:
@@ -223,12 +227,15 @@ class Tetris(NESEnv):
             action = (p['placement_pos'][0],p['placement_pos'][1],p['placed_piece']['orientation'])
             self._placements[action] = p
 
-            if self._mode == FEATURE_DQN:
+            if self._mode == FEATURE_DQN or self._mode == MIX_DQN:
                 board = p['board']
                 holes, overhangs, hole_depth = score_holes(board, get_column_heights(board))
                 jagged, slope = score_bumps(get_column_heights(board))
-                states[action] = [holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board), piece_data[self._next_piece]['id']]
-            
+                if self._mode == MIX_DQN:
+                    states[action] = (p['board'], [holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board), piece_data[self._next_piece]['id']])
+                else:
+                    states[action] = [holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board), piece_data[self._next_piece]['id']]
+
             elif self._mode == BOARD_DQN:
                 states[action] = np.append(p['board'],[[piece_data[self._next_piece]['id'] for i in range(10)]], axis=0)
             
@@ -250,7 +257,6 @@ class Tetris(NESEnv):
         # get the current/next pieces
         init_piece = self._current_piece
         next_piece = self._next_piece
-        last_three_pos = [self._piece_position,self._piece_position,self._piece_position,self._piece_position,self._piece_position]
 
         while True:
             # break the loop if the game phase becomes unplayable
@@ -276,12 +282,10 @@ class Tetris(NESEnv):
                 elif curr_pos[0] - placement['path'][0][0][0] < 0:
                     action += JYPD_RIGHT
                 if action > 0:
-                    del last_three_pos[0]
-                    last_three_pos += [[self._piece_position, action]]
                     self._frame_advance(action)
                     if self._render:
                         self.render()
-                        time.sleep(1/self._render)
+                        time.sleep(1/self._render if self._render > 0 else 0)
 
             # if it's already above where it should be, and there is a move (tuck/spin) to be done
             if len(placement['path']) > 1 and curr_pos[1] >= placement['path'][0][0][1]:
@@ -291,33 +295,26 @@ class Tetris(NESEnv):
                 for s in subpath:
                     action = get_action([s[1]])
                     if action > 0:
-                        del last_three_pos[0]
-                        last_three_pos += [[self._piece_position, action]]
                         self._frame_advance(action)
                         if self._render:
                             self.render()
-                            time.sleep(1/self._render)
+                            time.sleep(1/self._render if self._render > 0 else 0)
                     placement['path'].remove(s)
                     path_used = True
-                """if len(subpath) == 2:
-                    print(placement['path'][0][0][1])
-                    print('spintuck', last_three_pos, subpath, action)"""
 
             # do not skip a frame if the path has been used, or if the piece has changed in height
             if not (curr_pos[1] != self._piece_position[1] or path_used):
-                del last_three_pos[0]
-                last_three_pos += [[self._piece_position, action]]
                 self._frame_advance(0)
                 if self._render:
                     self.render()
-                    time.sleep(1/self._render)
+                    time.sleep(1/self._render if self._render > 0 else 0)
 
         # skip frames until the game is at a playable phase
         while self._game_phase != 1:
             self._frame_advance(0)
             if self._render:
                 self.render()
-                time.sleep(1/self._render)
+                time.sleep(1/self._render if self._render > 0 else 0)
             if self._is_game_over:
                 break
 
@@ -334,7 +331,7 @@ class Tetris(NESEnv):
             self._frame_advance(0)
             if self._render:
                 self.render()
-                time.sleep(1/self._render)
+                time.sleep(1/self._render if self._render > 0 else 0)
             if self._is_game_over:
                 break
 

@@ -2,7 +2,7 @@ from tetris_env import Tetris
 from collections import namedtuple
 import torch
 import numpy as np
-import random, sys, os
+import random, sys, os, time
 from data import *
 from dqn import DeepQNetwork as DQN
 from statistics import mean
@@ -57,11 +57,12 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 		
 	if mode == BOARD_DQN:
 		input_size = [10,21]
-	elif mode == FEATURE_DQN:
-		input_size = [n_features]
+	else:
+		input_size = [10,20]
+	feature_size = 8
 
-	model = DQN(mode, input_size).to(device)
-	target = DQN(mode, input_size).to(device)
+	model = DQN(mode, input_size, feature_size).to(device)
+	target = DQN(mode, input_size, feature_size).to(device)
 
 	if load_model == None:
 		load_model = model_name
@@ -90,12 +91,16 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 		else:
 			replayed = 0
 			seed = random.randint(0,255), random.randint(0,255)
-		env = Tetris(mode, seed, start_level = 18, render=False)
+		env = Tetris(mode, seed, start_level = 18, render = False)
 		state = env._get_state()
-		state = torch.tensor(state, device=device, dtype=torch.float)
+		if mode == MIX_DQN:
+			state = (torch.tensor(state[0], device=device, dtype=torch.float), torch.tensor(state[1], device=device, dtype=torch.float))
+		else:
+			state = torch.tensor(state, device=device, dtype=torch.float)
 		states = env._get_states()
 		done = False
 		score = 0
+		t = time.time()
 
 		while not done:
 			next_actions, next_states = zip(*states.items())
@@ -103,20 +108,31 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 			e = e_end + (max(e_decay - epoch, 0) * (e_start - e_end) / e_decay)
 			random_action = random.random() <= e
 
-			next_states = torch.tensor(next_states, device=device, dtype=torch.float)
-			if mode != FEATURE_DQN:
-				next_states = next_states.view(next_states.shape[0], 1, next_states.shape[1], next_states.shape[2])
+			if mode == MIX_DQN:
+				board_states = torch.tensor([obj[0] for obj in next_states], device=device, dtype=torch.float)
+				board_states = board_states.view(board_states.shape[0], 1, board_states.shape[1], board_states.shape[2])
+				next_states = (board_states, torch.tensor([obj[1] for obj in next_states], device=device, dtype=torch.float))
+			else:
+				next_states = torch.tensor(next_states, device=device, dtype=torch.float)
+			
+				if mode == BOARD_DQN:
+					next_states = next_states.view(next_states.shape[0], 1, next_states.shape[1], next_states.shape[2])
+				next_states = [next_states]
 			model.eval()
 			with torch.no_grad():
-				predictions = model(next_states)
+				predictions = model(*next_states)
 			model.train()
 
 			if random_action:
-				index = random.randint(0, len(next_states)-1)
+				size = len(next_states[0]) if mode == MIX_DQN else len(next_states)
+				index = random.randint(0, size-1)
 			else:
 				index = torch.argmax(predictions).item()
 
-			next_state = next_states[index, :]
+			if mode == MIX_DQN:
+				next_state = (next_states[0][index, :], next_states[1][index, :])
+			else:
+				next_state = next_states[0][index, :]
 			action = next_actions[index]
 
 			states, reward, done, info = env.step(action)
@@ -125,30 +141,38 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 			memory.push(state, done, next_state, torch.tensor([[reward]], device=device, dtype=torch.float))
 
 			if done and epoch > 0:
+				t = time.time() - t
 				if info['score'] > high_score:
 					high_score = info['score']
 
-				sys.stdout.write('\r| Game %d | Reward Score: %3f | Game Score: %d | Lines Cleared: %d | Highest Score: %d |' % 
-					(epoch, score, info['score'], info['number_of_lines'], high_score))
+				sys.stdout.write('\rGame {:4.0f} | Reward Score: {:5.0f} | Game Score: {:6.0f} | Lines Cleared: {:3.0f} | Highest Score: {:6.0f} | Playtime: {:2.0f}:{:02.0f}'.format(
+					epoch, 
+					score, 
+					info['score'], 
+					info['number_of_lines'], 
+					high_score, 
+					t // 60, t % 60 
+				))
 
-				game_history.append([score, info['score'], info['number_of_lines']])
-				if len(game_history) > 100:
-					del game_history[0]
+				if len(memory) > 2000:
+					game_history.append([score, info['score'], info['number_of_lines']])
+					if len(game_history) > 100:
+						del game_history[0]
 
-				graph_data['reward'] = np.append(graph_data['reward'], [mean([g[0] for g in game_history])])
-				graph_data['score'] = np.append(graph_data['score'], [mean([g[1] for g in game_history])])
-				graph_data['lines'] = np.append(graph_data['lines'], [mean([g[2] for g in game_history])])
+					graph_data['reward'] = np.append(graph_data['reward'], [mean([g[0] for g in game_history])])
+					graph_data['score'] = np.append(graph_data['score'], [mean([g[1] for g in game_history])])
+					graph_data['lines'] = np.append(graph_data['lines'], [mean([g[2] for g in game_history])])
 
-				plt.close()
-				#fig, ax = plt.subplots(3, 1)
-				for i, (k, graph) in enumerate(graph_data.items()):
-					plt.clf()
-					plt.plot(graph)
-					plt.xlabel('epoch')
-					plt.ylabel('mean %s over the last 100 games' % k)
-					plt.title('%s vs. Games Played' % k)
-					plt.savefig('graphs/plots/%s_%s.png' % (model_name, k))
-				np.save('graphs/data/%s.npy' % model_name, np.array([graph_data['reward'], graph_data['score'], graph_data['lines']]))
+					plt.close()
+					
+					for i, (k, graph) in enumerate(graph_data.items()):
+						plt.clf()
+						plt.plot(graph)
+						plt.xlabel('epoch')
+						plt.ylabel('mean %s over the last 100 games' % k)
+						plt.title('%s vs. Games Played' % k)
+						plt.savefig('graphs/plots/%s_%s.png' % (model_name, k))
+					np.save('graphs/data/%s.npy' % model_name, np.array([graph_data['reward'], graph_data['score'], graph_data['lines']]))
 
 				break
 			else:
@@ -157,24 +181,31 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 
 
 		if len(memory) > batch_size and len(memory) > 2000:
-			if info['number_of_lines'] > (line_start + ((epoch - e_decay) / line_growth) * (line_end - line_start)):
-				epoch += 1
+			epoch += 1
 			transitions = memory.sample(batch_size)
 			batch = Transition(*zip(*transitions))
 
 			if mode == FEATURE_DQN:
-				state_batch = torch.cat(batch.state).view(-1,8)
+				state_batch = [torch.cat(batch.state).view(-1,8)]
+			elif mode == MIX_DQN:
+				board_states = torch.cat([obj[0] for obj in batch.state]).view(-1,1,20,10)
+				feature_states = torch.cat([obj[1] for obj in batch.state]).view(-1,8)
+				state_batch = (board_states, feature_states)
 			else:
-				state_batch = torch.cat(batch.state).view(-1,1,21,10)
+				state_batch = [torch.cat(batch.state).view(-1,1,21,10)]
 			reward_batch = torch.cat(batch.reward)
 			done_batch = list(batch.done)
 			if mode == FEATURE_DQN:
-				next_state_batch = torch.cat(batch.next_state).view(-1,8)
+				next_state_batch = [torch.cat(batch.next_state).view(-1,8)]
+			elif mode == MIX_DQN:
+				board_states = torch.cat([obj[0] for obj in batch.next_state]).view(-1,1,20,10)
+				feature_states = torch.cat([obj[1] for obj in batch.next_state]).view(-1,8)
+				next_state_batch = (board_states, feature_states)				
 			else:
-				next_state_batch = torch.cat(batch.next_state).view(-1,1,21,10)
+				next_state_batch = [torch.cat(batch.next_state).view(-1,1,21,10)]
 
-			q_values = model(state_batch)
-			next_prediction_batch = target(next_state_batch)
+			q_values = model(*state_batch)
+			next_prediction_batch = target(*next_state_batch)
 
 			g_batch = torch.cat(tuple(reward if done else reward + g * prediction for reward, done, prediction in zip(reward_batch, done_batch, next_prediction_batch)))[:, None]
 
@@ -191,11 +222,11 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 			if epoch % 15 == 0:
 				target.load_state_dict(model.state_dict())
 			if epoch == epochs // 2:
-				torch.save(model.state_dict(), 'models/%s-%d.pth' % (model_name, epochs // 2))
-				np.save('graphs/data/%s-%d.npy' % (model_name, epochs // 2), np.array([graph_data['reward'], graph_data['score'], graph_data['lines']]))
-				with open('scores/%s-%d.txt' % (model_name, epochs // 2), 'w') as f:
+				torch.save(model.state_dict(), 'models/%s_%d.pth' % (model_name, epochs // 2))
+				np.save('graphs/data/%s_%d.npy' % (model_name, epochs // 2), np.array([graph_data['reward'], graph_data['score'], graph_data['lines']]))
+				with open('scores/%s_%d.txt' % (model_name, epochs // 2), 'w') as f:
 					f.write(str(high_score))
-				with open('checkpoints/%s-%d.txt' % (model_name, epochs // 2), 'w') as f:
+				with open('checkpoints/%s_%d.txt' % (model_name, epochs // 2), 'w') as f:
 					f.write(str(epoch))
 		else:
 			info = {'number_of_lines':230}
@@ -205,8 +236,12 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 
 
 if __name__ == '__main__':
-	train(epochs = 10000, model_name = 'feature_model_short', mode = FEATURE_DQN, max_replays = 0)
-	train(epochs = 10000, model_name = 'board_model_short', mode = BOARD_DQN, max_replays = 0)
-	train(epochs = 10000, load_model = 'feature_model_short_5000', model_name = 'feature_model_replays_short', mode = FEATURE_DQN)
-	train(epochs = 10000, load_model = 'board_model_short_5000', model_name = 'board_model_replays_short', mode = BOARD_DQN)
+	#train(epochs = 10000, load_model = 'feature_model_short_5000', model_name = 'feature_model_short', mode = FEATURE_DQN, max_replays = 0)
+	#train(epochs = 10000, model_name = 'board_model_short', mode = BOARD_DQN, max_replays = 0)
+	#train(epochs = 10000, model_name = 'feature_model_replays_short', mode = FEATURE_DQN)
+	#train(epochs = 10000, load_model = 'board_model_short_5000', model_name = 'board_model_replays_short', mode = BOARD_DQN)
+
+	#train(epochs = 5000, model_name = 'model_5000e', mode = BOARD_DQN)
+	#train(epochs = 15000, model_name = 'model_15000e', mode = BOARD_DQN)
+	train(epochs = 20000, model_name = 'mix_model_20000e', mode = MIX_DQN)
 	
