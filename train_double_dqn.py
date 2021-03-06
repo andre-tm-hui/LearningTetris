@@ -34,7 +34,7 @@ class ReplayMemory(object):
         return len(self.memory)
 
 
-def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mode = FEATURE_DQN, n_features = 8, max_replays = 5):
+def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mode = FEATURE_DQN, n_features = 8, max_replays = 5, feature_select = None):
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 	for p in ['graphs', 'graphs/data', 'graphs/plots', 'scores', 'models', 'checkpoints']:
@@ -91,7 +91,11 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 		else:
 			replayed = 0
 			seed = random.randint(0,255), random.randint(0,255)
-		env = Tetris(mode, seed, start_level = 18, render = False)
+		if feature_select != None:
+			env = Tetris(mode, seed, start_level = 18, render = False, feature_select = feature_select)
+		else:
+			env = Tetris(mode, seed, start_level = 18, render = False)
+
 		state = env._get_state()
 		if mode == MIX_DQN:
 			state = (torch.tensor(state[0], device=device, dtype=torch.float), torch.tensor(state[1], device=device, dtype=torch.float))
@@ -243,5 +247,6 @@ if __name__ == '__main__':
 
 	#train(epochs = 5000, model_name = 'model_5000e', mode = BOARD_DQN)
 	#train(epochs = 15000, model_name = 'model_15000e', mode = BOARD_DQN)
-	train(epochs = 20000, model_name = 'mix_model_20000e', mode = MIX_DQN)
+	#train(epochs = 20000, model_name = 'mix_model_20000e', mode = MIX_DQN)
+	train(epochs = 20000, model_name = 'board_model_20000e', mode = MIX_DQN, feature_select = [0])
 	

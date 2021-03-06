@@ -31,7 +31,7 @@ _PIECE_ORIENTATION_TABLE = [
 
 class Tetris(NESEnv):
     # mode can be: GENETIC, BOARD_DQN or FEATURE_DQN
-    def __init__(self, mode, seed = False, start_level = 18, weights = [0], render = False):
+    def __init__(self, mode, seed = False, start_level = 18, weights = [0], render = False, feature_select = [0,1,2,3,4,5,6,7]):
         super(Tetris, self).__init__('tetris.nes')
         self._start_level = start_level
         self._current_score = 0
@@ -42,6 +42,7 @@ class Tetris(NESEnv):
         self._weights = weights
         self._last_piece = None
         self._last_next_piece = None
+        self._feature_select = feature_select
         if self._mode == GENETIC:
             self._next_placements = {}
         self.reset()
@@ -201,14 +202,14 @@ class Tetris(NESEnv):
             board = self._board
             holes, overhangs, hole_depth = score_holes(board, get_column_heights(board))
             jagged, slope = score_bumps(get_column_heights(board))
-            ret_state = [holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board), piece_data[self._next_piece]['id']]
+            ret_state = [piece_data[self._next_piece]['id'], holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board)]
         else:
             # append the next piece to the board before returning it
             ret_state = [np.append(self._board,[[piece_data[self._current_piece]['id'] for i in range(10)]], axis=0)]
         if self._mode == FEATURE_DQN or self._mode == BOARD_DQN:
             return ret_state
         else:
-            return [self._board], ret_state
+            return [self._board], [ret_state[i] for i in self._feature_select]
 
     def _get_states(self):
         while self._current_piece == None and not self._is_game_over:
