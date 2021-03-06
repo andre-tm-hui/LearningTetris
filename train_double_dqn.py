@@ -190,7 +190,7 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 			batch = Transition(*zip(*transitions))
 
 			if mode == FEATURE_DQN:
-				state_batch = [torch.cat(batch.state).view(-1,8)]
+				state_batch = [torch.cat(batch.state).view(-1,feature_size)]
 			elif mode == MIX_DQN:
 				board_states = torch.cat([obj[0] for obj in batch.state]).view(-1,1,20,10)
 				feature_states = torch.cat([obj[1] for obj in batch.state]).view(-1,8)
