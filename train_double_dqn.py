@@ -200,7 +200,7 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 			reward_batch = torch.cat(batch.reward)
 			done_batch = list(batch.done)
 			if mode == FEATURE_DQN:
-				next_state_batch = [torch.cat(batch.next_state).view(-1,8)]
+				next_state_batch = [torch.cat(batch.next_state).view(-1,feature_size)]
 			elif mode == MIX_DQN:
 				board_states = torch.cat([obj[0] for obj in batch.next_state]).view(-1,1,20,10)
 				feature_states = torch.cat([obj[1] for obj in batch.next_state]).view(-1,8)
