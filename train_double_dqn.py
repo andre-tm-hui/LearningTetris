@@ -193,7 +193,7 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 				state_batch = [torch.cat(batch.state).view(-1,feature_size)]
 			elif mode == MIX_DQN:
 				board_states = torch.cat([obj[0] for obj in batch.state]).view(-1,1,20,10)
-				feature_states = torch.cat([obj[1] for obj in batch.state]).view(-1,8)
+				feature_states = torch.cat([obj[1] for obj in batch.state]).view(-1,feature_size)
 				state_batch = (board_states, feature_states)
 			else:
 				state_batch = [torch.cat(batch.state).view(-1,1,21,10)]
@@ -203,7 +203,7 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 				next_state_batch = [torch.cat(batch.next_state).view(-1,feature_size)]
 			elif mode == MIX_DQN:
 				board_states = torch.cat([obj[0] for obj in batch.next_state]).view(-1,1,20,10)
-				feature_states = torch.cat([obj[1] for obj in batch.next_state]).view(-1,8)
+				feature_states = torch.cat([obj[1] for obj in batch.next_state]).view(-1,feature_size)
 				next_state_batch = (board_states, feature_states)				
 			else:
 				next_state_batch = [torch.cat(batch.next_state).view(-1,1,21,10)]
