@@ -233,9 +233,10 @@ class Tetris(NESEnv):
                 holes, overhangs, hole_depth = score_holes(board, get_column_heights(board))
                 jagged, slope = score_bumps(get_column_heights(board))
                 if self._mode == MIX_DQN:
-                    states[action] = (p['board'], [holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board), piece_data[self._next_piece]['id']])
+                    features = [piece_data[self._next_piece]['id'], holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board)]
+                    states[action] = (p['board'], [features[i] for i in self._feature_select])
                 else:
-                    states[action] = [holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board), piece_data[self._next_piece]['id']]
+                    states[action] = [piece_data[self._next_piece]['id'], holes, overhangs, hole_depth, jagged, slope, wells(get_column_heights(board)), parity(board)]
 
             elif self._mode == BOARD_DQN:
                 states[action] = np.append(p['board'],[[piece_data[self._next_piece]['id'] for i in range(10)]], axis=0)

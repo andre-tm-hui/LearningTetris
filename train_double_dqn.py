@@ -59,7 +59,7 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 		input_size = [10,21]
 	else:
 		input_size = [10,20]
-	feature_size = 8
+	feature_size = len(feature_select)
 
 	model = DQN(mode, input_size, feature_size).to(device)
 	target = DQN(mode, input_size, feature_size).to(device)
