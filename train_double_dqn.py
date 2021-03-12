@@ -34,8 +34,14 @@ class ReplayMemory(object):
         return len(self.memory)
 
 
-def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mode = FEATURE_DQN, n_features = 8, max_replays = 5, feature_select = None):
+def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mode = FEATURE_DQN, n_features = 8, max_replays = 0, feature_select = None):
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+	if os.path.isfile('train_dataset_%d.npy' % epochs):
+		train_dataset = np.load('train_dataset_%d.npy' % epochs)
+	else:
+		train_dataset = np.random.randint(0, 255, (int(1.5 * epochs), 2))
+		np.save('train_dataset_%d.npy' % epochs, train_dataset)
 
 	for p in ['graphs', 'graphs/data', 'graphs/plots', 'scores', 'models', 'checkpoints']:
 		if not os.path.isdir(p):
@@ -83,6 +89,8 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 	optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
 	criterion = torch.nn.MSELoss()
 
+	game_index = 0
+
 	while epoch < epochs:
 		# replay a certain seed up to 3 times, starting from epoch 10000, if the score is below a threshold
 		# as a result, the threshold increases over time, starting from 20 and ending at ~190
@@ -90,7 +98,8 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 			replayed += 1
 		else:
 			replayed = 0
-			seed = random.randint(0,255), random.randint(0,255)
+			seed = tuple(train_dataset[game_index])
+			game_index += 1
 		if feature_select != None:
 			env = Tetris(mode, seed, start_level = 18, render = False, feature_select = feature_select)
 		else:
