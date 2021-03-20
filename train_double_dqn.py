@@ -257,14 +257,11 @@ if __name__ == '__main__':
 	#train(epochs = 5000, model_name = 'model_5000e', mode = BOARD_DQN)
 	#train(epochs = 15000, model_name = 'model_15000e', mode = BOARD_DQN)
 	#train(epochs = 20000, model_name = 'mix_model_20000e', mode = MIX_DQN)
-	train(epochs = 20000, model_name = 'board_model_20000e', mode = MIX_DQN, feature_select = [0])
+	train(0, 5000, None, 'board_orig', BOARD_DQN, 0, [], 0.001)
 
-	import multiprocessing as mp
+	#import multiprocessing as mp
 	# (epoch, epochs, load_model, model_name, mode, max_replays, feature_select, lr)
-	p1 = mp.Process(target=train, args=(0, 5000, None, 'board_orig', BOARD_DQN, 0, [], 0.001))
-	p2 = mp.Process(target=train, args=(0, 5000, None, 'board_new', MIX_DQN, 0, [0], 0.001))
-	p3 = mp.Process(target=train, args=(0, 5000, None, 'mix_all', MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.001))
-	p1.start()
-	p2.start()
-	p3.start()
+	#p1 = mp.Process(target=train, args=(0, 5000, None, 'board_orig', BOARD_DQN, 0, [], 0.001))
+	#p2 = mp.Process(target=train, args=(0, 5000, None, 'board_new', MIX_DQN, 0, [0], 0.001))
+	#p3 = mp.Process(target=train, args=(0, 5000, None, 'mix_all', MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.001))
 	
