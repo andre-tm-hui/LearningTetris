@@ -34,7 +34,7 @@ class ReplayMemory(object):
         return len(self.memory)
 
 
-def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mode = FEATURE_DQN, n_features = 8, max_replays = 0, feature_select = None):
+def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mode = FEATURE_DQN, max_replays = 0, feature_select = None, lr = 0.001):
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 	if os.path.isfile('train_dataset_%d.npy' % epochs):
@@ -86,7 +86,7 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 
 	memory = ReplayMemory(10000)
 	
-	optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
+	optimizer = torch.optim.Adam(model.parameters(), lr = lr)
 	criterion = torch.nn.MSELoss()
 
 	game_index = 0
@@ -258,4 +258,10 @@ if __name__ == '__main__':
 	#train(epochs = 15000, model_name = 'model_15000e', mode = BOARD_DQN)
 	#train(epochs = 20000, model_name = 'mix_model_20000e', mode = MIX_DQN)
 	train(epochs = 20000, model_name = 'board_model_20000e', mode = MIX_DQN, feature_select = [0])
+
+	import multiprocessing as mp
+	# (epoch, epochs, load_model, model_name, mode, max_replays, feature_select, lr)
+	p1 = mp.Process(target=train, args=(0, 5000, None, 'board_orig', BOARD_DQN, 0, [], 0.001))
+	p2 = mp.Process(target=train, args=(0, 5000, None, 'board_new', MIX_DQN, 0, [0], 0.001))
+	p3 = mp.Process(target=train, args=(0, 5000, None, 'mix_all', MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.001))
 	
