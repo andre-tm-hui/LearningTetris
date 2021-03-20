@@ -264,4 +264,7 @@ if __name__ == '__main__':
 	p1 = mp.Process(target=train, args=(0, 5000, None, 'board_orig', BOARD_DQN, 0, [], 0.001))
 	p2 = mp.Process(target=train, args=(0, 5000, None, 'board_new', MIX_DQN, 0, [0], 0.001))
 	p3 = mp.Process(target=train, args=(0, 5000, None, 'mix_all', MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.001))
+	p1.start()
+	p2.start()
+	p3.start()
 	
