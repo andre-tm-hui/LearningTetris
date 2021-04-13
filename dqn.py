@@ -8,10 +8,10 @@ class DeepQNetwork(nn.Module):
         self.input_type = input_type
 
         if self.input_type == BOARD_DQN or self.input_type == MIX_DQN:
-            self.conv1 = nn.Sequential(nn.Conv2d(1, 8, kernel_size=3, stride=2), nn.BatchNorm2d(8), nn.ReLU(inplace=True))
-            self.conv2 = nn.Sequential(nn.Conv2d(8, 16, kernel_size=3, stride=2), nn.BatchNorm2d(16), nn.ReLU(inplace=True))
+            self.conv1 = nn.Sequential(nn.Conv2d(1, 8, kernel_size=5, stride=1), nn.BatchNorm2d(8), nn.ReLU(inplace=True))
+            self.conv2 = nn.Sequential(nn.Conv2d(8, 16, kernel_size=5, stride=1), nn.BatchNorm2d(16), nn.ReLU(inplace=True))
             
-            def conv2d_size_out(size, kernel_size = 3, stride = 2):
+            def conv2d_size_out(size, kernel_size = 5, stride = 1):
             	return (size - (kernel_size - 1) - 1) // stride + 1
             convw = conv2d_size_out(conv2d_size_out(input_size[0]))
             convh = conv2d_size_out(conv2d_size_out(input_size[1]))

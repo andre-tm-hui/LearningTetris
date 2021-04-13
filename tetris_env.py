@@ -321,7 +321,7 @@ class Tetris(NESEnv):
                 break
 
         # DEBUGGING: check if the current board is equal to the next board, i.e. check for missdrops
-        if not are_equal(self._board, placement['board']) and curr_pos[1] > 3:
+        if not are_equal(self._board, placement['board']) and curr_pos[1] > 3 and False:
             print('missdrop', placement['placement_pos'], placement['init_piece']['rotations'])
             print(self._board)
             print(placement['board'])

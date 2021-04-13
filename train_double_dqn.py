@@ -246,6 +246,7 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 
 		with open('scores/%s.txt' % model_name, 'w') as f:
 			f.write(str(high_score))
+	return high_score
 
 
 if __name__ == '__main__':
@@ -257,7 +258,55 @@ if __name__ == '__main__':
 	#train(epochs = 5000, model_name = 'model_5000e', mode = BOARD_DQN)
 	#train(epochs = 15000, model_name = 'model_15000e', mode = BOARD_DQN)
 	#train(epochs = 20000, model_name = 'mix_model_20000e', mode = MIX_DQN)
-	train(0, 5000, None, 'board_orig', BOARD_DQN, 0, [], 0.001)
+	#train(0, 5000, None, 'mix_all_2', MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.001)
+	#train(0, 5000, None, 'mix_next_2', MIX_DQN, 0, [0], 0.001)
+
+	sum_full, sum_min, sum_board = 0, 0, 0
+	for i in range(5):
+		sum_full += train(0, 5000, None, 'mix_full_%d' % i, MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.001)
+		sum_min += train(0, 5000, None, 'mix_min_%d' % i, MIX_DQN, 0, [0], 0.001)
+		sum_board += train(0, 5000, None, 'board_next_%d' % i, BOARD_DQN, 0, [], 0.001)
+
+	print(sum_full, sum_min, sum_board)
+
+	print('\nAverage Scores for:',
+		'\nMix (All Features): %f' % (sum_full / 5),
+		'\nMix (Next Only): %f' % (sum_min / 5),
+		'\nBoard: %f' % (sum_board /5)
+	)
+
+	lrs = [0.01, 0.001, 0.0001]
+	lr_scores = []
+	for i, lr in enumerate(lrs):
+		sum_scores = 0
+		for j in range(3):
+			if lr != 0.001:
+				sum_scores += train(0, 5000, None, 'mix_next_%d_%f' % (j,lr), MIX_DQN, 0, [0], lr)
+			else:
+				sum_scores += train(0, 5000, None, 'mix_min_%d' % j, MIX_DQN, 0, [0], lr)
+
+		lr_scores += [sum_scores]
+
+	lr = lrs[lr_scores.index(max(lr_scores))]
+
+	print('\nAverage Scores with changing learning rates:',
+		'\n0.01: %f' % (lr_scores[0] / 3),
+		'\n0.001: %f' % (lr_scores[1] / 3),
+		'\n0.0001: %f' % (lr_scores[2] / 3))
+
+	configs = [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7]]
+	heur_scores = []
+	for i, c in enumerate(configs):
+		sum_scores = 0
+		for j in range(3):
+			sum_scores += train(0, 5000, None, 'mix_nextplus%d_%d' % (c[1], j), MIX_DQN, 0, c, lr)
+
+		heur_scores += [sum_scores]
+
+
+	print('\nAverage Scores with different heuristics, added individually:')
+	for c, s in zip(configs, heur_scores):
+		print('\n%d: %f' % (c[1], s / 3))
 
 	#import multiprocessing as mp
 	# (epoch, epochs, load_model, model_name, mode, max_replays, feature_select, lr)
