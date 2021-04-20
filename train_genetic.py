@@ -12,19 +12,20 @@ if __name__ == '__main__':
 	generation_crossover_p = 0.2
 	mutation_p = 0.03
 	games_played = 5
+	generations = 10
 	
 
-	load = True
-	if load:
+	try:
 		player_data = np.load('players.npy')
 		print('Highest Score:', player_data[0][-1])
 		generation = np.load('generation.npy')[0]
-	else:
+	except:
+		print('No previous data found.')
 		for _ in range(1, int(players*initial_population_multiplier)):
 			player = np.array([random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(), 0])
 			player_data = np.append(player_data, [player], axis = 0)
 
-	while True:
+	while generation < generations:
 		seeds = []
 		for _ in range(games_played):
 			seeds.append((random.randint(0,255), random.randint(0,255)))
@@ -68,3 +69,6 @@ if __name__ == '__main__':
 		generation += 1
 		np.save('players.npy', player_data)
 		np.save('generation.npy', np.array([generation]))
+
+	print('Highest Score:', player_data[0][-1])
+	print('Best Player:', player_data[0])

@@ -170,9 +170,9 @@ class Tetris(NESEnv):
     def _get_reward(self):
         """Return the reward after a step occurs."""
         # reward the change in score
-        reward = 1 * line_clear_scores[self._number_of_lines - self._current_lines]
+        reward = line_clear_scores[self._number_of_lines - self._current_lines]
         # add weight to moves played later in the game
-        reward = reward * (1 + 0.05 * self._number_of_lines)
+        #reward = reward * (1 + 0.05 * self._number_of_lines)
         # update the locals
         self._current_score += reward
         self._current_lines = self._number_of_lines

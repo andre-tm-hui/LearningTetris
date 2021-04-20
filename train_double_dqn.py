@@ -261,11 +261,13 @@ if __name__ == '__main__':
 	#train(0, 5000, None, 'mix_all_2', MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.001)
 	#train(0, 5000, None, 'mix_next_2', MIX_DQN, 0, [0], 0.001)
 
+	train(0, 30000, None, 'best', MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.002)
+
 	sum_full, sum_min, sum_board = 0, 0, 0
 	for i in range(5):
-		sum_full += train(0, 5000, None, 'mix_full_%d' % i, MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.001)
-		sum_min += train(0, 5000, None, 'mix_min_%d' % i, MIX_DQN, 0, [0], 0.001)
-		sum_board += train(0, 5000, None, 'board_next_%d' % i, BOARD_DQN, 0, [], 0.001)
+		sum_full += train(0, 5000, None, 'full_%d' % i, MIX_DQN, 0, [0,1,2,3,4,5,6,7], 0.001)
+		sum_min += train(0, 5000, None, 'min_%d' % i, MIX_DQN, 0, [0], 0.001)
+		#sum_board += train(0, 5000, None, 'board_next_%d' % i, BOARD_DQN, 0, [], 0.001)
 
 	print(sum_full, sum_min, sum_board)
 
@@ -279,11 +281,11 @@ if __name__ == '__main__':
 	lr_scores = []
 	for i, lr in enumerate(lrs):
 		sum_scores = 0
-		for j in range(3):
+		for j in range(4):
 			if lr != 0.001:
-				sum_scores += train(0, 5000, None, 'mix_next_%d_%f' % (j,lr), MIX_DQN, 0, [0], lr)
+				sum_scores += train(0, 5000, None, 'next_%d_%f' % (j,lr), MIX_DQN, 0, [0], lr)
 			else:
-				sum_scores += train(0, 5000, None, 'mix_min_%d' % j, MIX_DQN, 0, [0], lr)
+				sum_scores += train(0, 5000, None, 'min_%d' % j, MIX_DQN, 0, [0], lr)
 
 		lr_scores += [sum_scores]
 
@@ -298,8 +300,8 @@ if __name__ == '__main__':
 	heur_scores = []
 	for i, c in enumerate(configs):
 		sum_scores = 0
-		for j in range(3):
-			sum_scores += train(0, 5000, None, 'mix_nextplus%d_%d' % (c[1], j), MIX_DQN, 0, c, lr)
+		for j in range(4):
+			sum_scores += train(0, 5000, None, 'nextplus%d_%d' % (c[1], j), MIX_DQN, 0, c, lr)
 
 		heur_scores += [sum_scores]
 
