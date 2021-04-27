@@ -2,23 +2,39 @@ from play_game import *
 import random
 from multiprocessing import Process, Value
 import numpy as np
+import argparse
+import os
+import pathlib
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-m', help='Model name', required=True, type=str)
+parser.add_argument('-players', help='Number of players per generation', default=100, type=int)
+parser.add_argument('-initmult', help='Population multiplier for the 0th generation', default=1.5, type=float)
+parser.add_argument('-ngames', help='Number of games played per player', default=5, type = int)
+parser.add_argument('-mutp', help='Probability of mutations', default = 0.03, type = float)
+parser.add_argument('-gens', help='Number of generations', default = 10, type = int)
+parser.add_argument('-crs', help='Crossover percentage', default = 0.2, tyipe = float)
 
 
 if __name__ == '__main__':
-	players = 100
+	args = parser.parse_args()
+
+	players = args.players
 	player_data = np.array([[random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(),random.random(), 0]])
 	generation = 0
-	initial_population_multiplier = 1.5
-	generation_crossover_p = 0.2
-	mutation_p = 0.03
-	games_played = 5
-	generations = 10
+	initial_population_multiplier = args.initmult
+	generation_crossover_p = args.crs
+	mutation_p = args.mutp
+	games_played = args.ngames
+	generations = args.gens
+
+	pathlib.Path('models/ga/%s' % args.m).mkdir(parents=True, exist_ok=True)
 	
 
 	try:
-		player_data = np.load('players.npy')
+		player_data = np.load('models/ga/%s/players.npy' % args.m)
 		print('Highest Score:', player_data[0][-1])
-		generation = np.load('generation.npy')[0]
+		generation = np.load('models/ga/%s/generation.npy' % args.m)[0]
 	except:
 		print('No previous data found.')
 		for _ in range(1, int(players*initial_population_multiplier)):
@@ -67,8 +83,8 @@ if __name__ == '__main__':
 		player_data = numpy.copy(next_generation)
 		print("Generation", str(generation), ":", player_data[0][-1])
 		generation += 1
-		np.save('players.npy', player_data)
-		np.save('generation.npy', np.array([generation]))
+		np.save('models/ga/%s/players.npy' % args.m, player_data)
+		np.save('models/ga/%s/generation.npy' % args.m, np.array([generation]))
 
 	print('Highest Score:', player_data[0][-1])
 	print('Best Player:', player_data[0])

@@ -6,12 +6,27 @@ import random, sys, os, time
 from data import *
 from dqn import DeepQNetwork as DQN
 from statistics import mean
+import argparse
+import pathlib
 
 import matplotlib.pyplot as plt
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-m', help='Model name', type=str)
+parser.add_argument('-epochs', help='Number of epochs to train for', default=10000, type=int)
+parser.add_argument('-feats', help='The list of selected features used for training', default=[0,1,2,3,4,5,6,7], type=int)
+parser.add_argument('-lr', help='Learning Rate', default=0.001, type=float)
+parser.add_argument('-e_start', help='Epsilon decay start value', default=1.0, type=float)
+parser.add_argument('-e_end', help='Epsilon decay end value', default=0.001, type=float)
+parser.add_argument('-batch_size', help='Batch Size', default=512, type=int)
+parser.add_argument('-train_all', help='Train all models for evaluation', default=False, type=bool)
+
+args = parser.parse_args()
+if not args.train_all:
+	train(0, args.epochs, None, args.m, MIX_DQN, args.feats, args.lr, args.e_start, args.e_end, args.batch_size)
+
 Transition = namedtuple('Transition',
                         ('state', 'done', 'next_state', 'reward'))
-
 
 class ReplayMemory(object):
 
@@ -34,28 +49,22 @@ class ReplayMemory(object):
         return len(self.memory)
 
 
-def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mode = FEATURE_DQN, max_replays = 0, feature_select = None, lr = 0.001):
+def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mode = MIX_DQN, feature_select = None, lr = 0.001, e_start = 0.999, e_end = 0.001, batch_size = 512):
 	device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-	if os.path.isfile('train_dataset_%d.npy' % epochs):
-		train_dataset = np.load('train_dataset_%d.npy' % epochs)
+	if os.path.isfile('models/dqn/datasets/train_dataset_%d.npy' % epochs):
+		train_dataset = np.load('models/dqn/datasets/train_dataset_%d.npy' % epochs)
 	else:
 		train_dataset = np.random.randint(0, 255, (int(1.5 * epochs), 2))
-		np.save('train_dataset_%d.npy' % epochs, train_dataset)
+		pathlib.Path('models/dqn/datasets/')
+		np.save('models/dqn/datasets/train_dataset_%d.npy' % epochs, train_dataset)
 
 	for p in ['graphs', 'graphs/data', 'graphs/plots', 'scores', 'models', 'checkpoints']:
 		if not os.path.isdir(p):
 			os.mkdir(p)
 	
-	e_start = 1
-	e_end = 0.001
 	e_decay = int(epochs * 0.5)
 	g = 0.999
-	batch_size = 512
-
-	line_start = 0
-	line_end = 200
-	line_growth = int(epochs * 0.25)
 
 	game_history = []
 	graph_data = {'reward':[], 'score':[], 'lines':[]}
@@ -92,14 +101,6 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 	game_index = 0
 
 	while epoch < epochs:
-		# replay a certain seed up to 3 times, starting from epoch 10000, if the score is below a threshold
-		# as a result, the threshold increases over time, starting from 20 and ending at ~190
-		if epoch > e_decay and epoch < e_decay + line_growth and info['number_of_lines'] < (line_start + (max(0, (epoch - e_decay) / line_growth)) * (line_end - line_start)) and replayed < max_replays:
-			replayed += 1
-		else:
-			replayed = 0
-			seed = tuple(train_dataset[game_index])
-			game_index += 1
 		if feature_select != None:
 			env = Tetris(mode, seed, start_level = 18, render = False, feature_select = feature_select)
 		else:

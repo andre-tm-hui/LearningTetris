@@ -6,6 +6,7 @@ import numpy as np
 from utils import *
 from data import *
 import time
+import cv2
 
 _PIECE_ORIENTATION_TABLE = [
     'Tu',
@@ -31,13 +32,14 @@ _PIECE_ORIENTATION_TABLE = [
 
 class Tetris(NESEnv):
     # mode can be: GENETIC, BOARD_DQN or FEATURE_DQN
-    def __init__(self, mode, seed = False, start_level = 18, weights = [0], render = False, feature_select = [0,1,2,3,4,5,6,7]):
+    def __init__(self, mode, seed = False, start_level = 18, weights = [0], render = False, feature_select = [0,1,2,3,4,5,6,7], save = False):
         super(Tetris, self).__init__('tetris.nes')
         self._start_level = start_level
         self._current_score = 0
         self._current_lines = 0
         self._mode = mode
         self._render = render
+        self._save = save
         self._placements = dict()
         self._weights = weights
         self._last_piece = None
@@ -45,8 +47,25 @@ class Tetris(NESEnv):
         self._feature_select = feature_select
         if self._mode == GENETIC:
             self._next_placements = {}
+
+        if self._save != False:
+            self._cap = cv2.VideoCapture(0)
+            self._fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            if type(self._save) == str:
+                self._out = cv2.VideoWriter('%s.avi' % self._save, self._fourcc, 60, (256,240))
+            else:
+                self._out = cv2.VideoWriter('output.avi', self._fourcc, 60, (256,240))
+
         self.reset()
         self._set_seed(seed)
+
+    def _next_frame(self, action):
+        if self._save != False:
+            self._out.write(np.array(self.screen)[:,:,::-1])
+        self._frame_advance(action)
+        if self._is_game_over and self._save:
+             self._out.write(np.array(self.screen)[:,:,::-1])
+             self._out.release()
 
     def _set_seed(self, seed):
         # set the seed
@@ -54,29 +73,29 @@ class Tetris(NESEnv):
             seed = random.randint(0,255), random.randint(0,255)
         while self.ram[0x00C0] in [0,1,2]:
             self.ram[0x0017:0x0019] = seed
-            self._frame_advance(JYPD_START)
-            self._frame_advance(0)
+            self._next_frame(JYPD_START)
+            self._next_frame(0)
         # wait until level-select menu is loaded
         for _ in range(5):
-            self._frame_advance(0)
+            self._next_frame(0)
         # move to appropriate starting level
         for _ in range(self._start_level % 10):
-            self._frame_advance(JYPD_RIGHT)
-            self._frame_advance(0)
+            self._next_frame(JYPD_RIGHT)
+            self._next_frame(0)
         # if the starting level is greater than 10, press 'A+Start', otherwise, just press 'Start'
         if self._start_level >= 10:
-            self._frame_advance(JYPD_A)
-            self._frame_advance(JYPD_A + JYPD_START)
+            self._next_frame(JYPD_A)
+            self._next_frame(JYPD_A + JYPD_START)
         else:
-            self._frame_advance(JYPD_START)
+            self._next_frame(JYPD_START)
         # skip one frame to exit level-select screen
-        self._frame_advance(0)
+        self._next_frame(0)
         # skip frames until the game is playable
         while self.ram[0x0048] != 1:
-            self._frame_advance(0)
+            self._next_frame(0)
         # skip frames until the piece position is at the spawning point [5,0]
         while self._piece_position != [5,0]:
-            self._frame_advance(0)
+            self._next_frame(0)
 
     def _read_bcd(self, address, length, little_endian=True):
         """
@@ -213,7 +232,7 @@ class Tetris(NESEnv):
 
     def _get_states(self):
         while self._current_piece == None and not self._is_game_over:
-            self._frame_advance(0)
+            self._next_frame(0)
         if self._is_game_over:
             return {}
         # generate all possible placements of the current piece
@@ -284,10 +303,12 @@ class Tetris(NESEnv):
                 elif curr_pos[0] - placement['path'][0][0][0] < 0:
                     action += JYPD_RIGHT
                 if action > 0:
-                    self._frame_advance(action)
+                    self._next_frame(action)
                     if self._render:
                         self.render()
                         time.sleep(1/self._render if self._render > 0 else 0)
+                    if self._save:
+                        self._cap
 
             # if it's already above where it should be, and there is a move (tuck/spin) to be done
             if len(placement['path']) > 1 and curr_pos[1] >= placement['path'][0][0][1]:
@@ -297,7 +318,7 @@ class Tetris(NESEnv):
                 for s in subpath:
                     action = get_action([s[1]])
                     if action > 0:
-                        self._frame_advance(action)
+                        self._next_frame(action)
                         if self._render:
                             self.render()
                             time.sleep(1/self._render if self._render > 0 else 0)
@@ -306,14 +327,14 @@ class Tetris(NESEnv):
 
             # do not skip a frame if the path has been used, or if the piece has changed in height
             if not (curr_pos[1] != self._piece_position[1] or path_used):
-                self._frame_advance(0)
+                self._next_frame(0)
                 if self._render:
                     self.render()
                     time.sleep(1/self._render if self._render > 0 else 0)
 
         # skip frames until the game is at a playable phase
         while self._game_phase != 1:
-            self._frame_advance(0)
+            self._next_frame(0)
             if self._render:
                 self.render()
                 time.sleep(1/self._render if self._render > 0 else 0)
@@ -330,7 +351,7 @@ class Tetris(NESEnv):
 
         # skip frames until the piece position is at the spawning point [5,0]
         while self._piece_position != [5,0]:
-            self._frame_advance(0)
+            self._next_frame(0)
             if self._render:
                 self.render()
                 time.sleep(1/self._render if self._render > 0 else 0)

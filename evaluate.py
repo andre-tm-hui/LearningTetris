@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-def play(fname, mode, seed = random.randint(0,255), features = None):
+def play(fname, mode, seed = (random.randint(0,255), random.randint(0,255)), features = None, save = False, render = False):
 	if mode == GENETIC:
 		player_data = np.load(fname)
 		weights = player_data[0][:-1]
@@ -22,7 +22,7 @@ def play(fname, mode, seed = random.randint(0,255), features = None):
 		model.eval()
 		weights = np.zeros(15)
 
-	env = Tetris(mode, seed, start_level = 18, weights = weights, render = False, feature_select = features)
+	env = Tetris(mode, seed, start_level = 18, weights = weights, render = render, save = save, feature_select = features)
 	states = env._get_states()
 	done = False
 	score = 0
@@ -64,16 +64,16 @@ def play(fname, mode, seed = random.randint(0,255), features = None):
 		pass
 	return score
 
-def score_config(fname, mode, seeds = list(range(10)), features = None):
+def score_config(fname, mode, seeds = list(range(10)), features = None, save = False, render = False):
 	score = []
 	for seed in seeds:
-		score += [play(fname, mode, seed = (0,seed), features = features)]
+		score += [play(fname, mode, seed = (0,seed), features = features, save = save, render = render)]
 
 	return score
 
 
 if __name__ == '__main__':
-	plt.plot([362424, 369540, 369992, 487876, 562752, 520696, 543740, 476056])
+	plt.plot([362424, 369540, 369992, 487876, 562752, 520696, 543740, 476056, 518952, 454976])
 	plt.xlabel('Generation')
 	plt.xticks(range(10))
 	plt.ylabel('Average Score')
@@ -159,18 +159,18 @@ if __name__ == '__main__':
 	plt.xticks(range(10))
 	plt.ylabel('Score')
 
-	for fname in dqn_fnames:
+	'''for fname in dqn_fnames:
 		if 'best' in fname:
-			score = score_config(evaluation_dir + fname, MIX_DQN, features = [0,1,2,3,4,5,6,7])
+			score = score_config(evaluation_dir + fname, MIX_DQN, features = [0,1,2,3,4,5,6,7], save = True, render = True)
 			print('Avg Score when DQN Used: %f' % np.mean(score))
 			print('Score SD when DQN Used: %f' % np.std(score))
 			break
 
 		plt.plot(score)
-		plt.savefig('compare.png')
+		plt.savefig('compare.png')'''
 
 	for fname in genetic_fnames:
-		score = score_config(fname, GENETIC, features = [0])
+		score = score_config(fname, GENETIC, features = [0], save = True, render = 6000, seeds = [0])
 		print('Avg Score when GA Used: %f' % np.mean(score))
 		print('Score SD when GA Used: %f' % np.std(score))
 		break
