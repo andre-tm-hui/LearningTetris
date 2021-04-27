@@ -247,9 +247,9 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 	return high_score
 
 
-if __name__ == '__main__':*
+if __name__ == '__main__':
 	args = parser.parse_args()
-	
+
 	if not args.train_all:
 		train(0, args.epochs, None, args.m, MIX_DQN, args.feats, args.lr, args.e_start, args.e_end, args.batch_size)
 	else:
