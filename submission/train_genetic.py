@@ -10,10 +10,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-m', help='Model name', required=True, type=str)
 parser.add_argument('-players', help='Number of players per generation', default=100, type=int)
 parser.add_argument('-initmult', help='Population multiplier for the 0th generation', default=1.5, type=float)
-parser.add_argument('-ngames', help='Number of games played per player', default=5, type = int)
+parser.add_argument('-ngames', help='Number of games played per player', default=5, type=int)
 parser.add_argument('-mutp', help='Probability of mutations', default = 0.03, type = float)
 parser.add_argument('-gens', help='Number of generations', default = 10, type = int)
-parser.add_argument('-crs', help='Crossover percentage', default = 0.2, tyipe = float)
+parser.add_argument('-crs', help='Crossover percentage', default = 0.2, type = float)
 
 
 if __name__ == '__main__':
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
 
 		player_data = sorted(player_data, key = lambda x: x[-1], reverse = True)
-		next_generation = np.copy(player_data[:int(generation_crossover_p * players)])
+		next_generation = np.copy(player_data[:max(2,int(generation_crossover_p * players))])
 
 		while len(next_generation) < players:
 			p1, p2 = random.randint(0,int(generation_crossover_p * players)-1), random.randint(0,int(generation_crossover_p * players)-1)

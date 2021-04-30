@@ -99,9 +99,9 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 
 	while epoch < epochs:
 		if feature_select != None:
-			env = Tetris(mode, seed, start_level = 18, render = False, feature_select = feature_select)
+			env = Tetris(mode, tuple(train_dataset[epoch]), start_level = 18, render = False, feature_select = feature_select)
 		else:
-			env = Tetris(mode, seed, start_level = 18, render = False)
+			env = Tetris(mode, tuple(train_dataset[epoch]), start_level = 18, render = False)
 
 		state = env._get_state()
 		if mode == MIX_DQN:
@@ -247,7 +247,7 @@ def train(epoch = 0, epochs = 20000, load_model = None, model_name = 'model', mo
 	return high_score
 
 
-if __name__ == '__main__':*
+if __name__ == '__main__':
 	args = parser.parse_args()
 	
 	if not args.train_all:
