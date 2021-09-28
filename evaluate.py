@@ -67,7 +67,7 @@ def play(fname, mode, seed = (random.randint(0,255), random.randint(0,255)), fea
 def score_config(fname, mode, seeds = list(range(10)), features = None, save = False, render = False):
 	score = []
 	for seed in seeds:
-		score += [play(fname, mode, seed = (0,seed), features = features, save = save, render = render)]
+		score += [play(fname, mode, seed = (0, 2 * seed), features = features, save = save, render = render)]
 
 	return score
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
 		elif 'npy' == fname[-3:]:
 			genetic_fnames += [evaluation_dir + fname]
 
-	'''next_plus = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []}
+	next_plus = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []}
 	lr = {1e-2: [], 1e-3: [], 1e-4: []}
 	full, next_only = [], []
 
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 			lr[float(fname[5:13])] += [evaluation_dir + fname]
 
 	plt.clf()
-	plt.xlabel('Game')
+	'''plt.xlabel('Game')
 	plt.xticks(range(10))
 	plt.ylabel('Score')
 
@@ -135,10 +135,10 @@ if __name__ == '__main__':
 			print('Score SD when Next Piece and Feature %d Used: %f' % (feat, np.std(score)))
 		plt.plot(np.mean(score, axis=0), label='Next Piece and Feature %d' % feat)
 
-	plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1.0))
-	plt.savefig('features.png')
-	plt.clf()
-	plt.xlabel('Game')
+	plt.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0))
+	plt.savefig('features.png', bbox_inches='tight')
+	plt.clf()'''
+	'''plt.xlabel('Game')
 	plt.xticks(range(10))
 	plt.ylabel('Score')
 
@@ -153,29 +153,32 @@ if __name__ == '__main__':
 		plt.plot(np.mean(score, axis=0), label='LR = %f' % lr)
 
 	plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1.0))
-	plt.savefig('lr.png')'''
-	plt.clf()
+	plt.savefig('lr.png', bbox_inches='tight')
+	plt.clf()'''
+
 	plt.xlabel('Game')
 	plt.xticks(range(10))
 	plt.ylabel('Score')
 
-	'''for fname in dqn_fnames:
+	for fname in dqn_fnames:
 		if 'best' in fname:
-			score = score_config(evaluation_dir + fname, MIX_DQN, features = [0,1,2,3,4,5,6,7], save = True, render = True)
+			score = score_config(evaluation_dir + fname, MIX_DQN, features = [0,1,2,3,4,5,6,7], save = True, render = False)
 			print('Avg Score when DQN Used: %f' % np.mean(score))
 			print('Score SD when DQN Used: %f' % np.std(score))
 			break
 
-		plt.plot(score)
-		plt.savefig('compare.png')'''
+	plt.plot(score, label='DQN')
+		
 
 	for fname in genetic_fnames:
-		score = score_config(fname, GENETIC, features = [0], save = True, render = 6000, seeds = [0])
+		score = score_config(fname, GENETIC, features = [0], save = True, render = False)
 		print('Avg Score when GA Used: %f' % np.mean(score))
 		print('Score SD when GA Used: %f' % np.std(score))
 		break
 
-	plt.plot(score)
+	plt.plot(score, label='GA')
+	plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1.0))
+	plt.savefig('compare.png', bbox_inches='tight')
 
 	
 

@@ -136,7 +136,7 @@ if __name__ == '__main__':
 		plt.plot(np.mean(score, axis=0), label='Next Piece and Feature %d' % feat)
 
 	plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1.0))
-	plt.savefig('features.png')
+	plt.savefig('features.png', bbox_inches='tight')
 	plt.clf()
 	plt.xlabel('Game')
 	plt.xticks(range(10))
